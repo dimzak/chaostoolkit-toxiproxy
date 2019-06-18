@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/chaostoolkit-incubator/chaostoolkit-toxiproxy.svg?branch=master)](https://travis-ci.org/chaostoolkit-incubator/haostoolkit-toxiproxy)
 [![Python versions](https://img.shields.io/pypi/pyversions/chaostoolkit-toxiproxy.svg)](https://www.python.org/)
 
-Welcome to the [Chaos Toolkit][chaostoolkit] driver for [Toxiproxy][toxiproxy]! This extension allows you to setup toxy proxy probes and methods from chaostoolkit by leveraging the toxyproxy [http management api](https://github.com/Shopify/toxiproxy#http-api). 
+Welcome to the [Chaos Toolkit][chaostoolkit] driver for [Toxiproxy][toxiproxy]! This extension allows you to setup toxiproxy probes and actions from chaostoolkit by leveraging toxiproxy [http management api](https://github.com/Shopify/toxiproxy#http-api). 
 
 [toxiproxy]: https://github.com/Shopify/toxiproxy
 [chaostoolkit]: http://chaostoolkit.org
@@ -23,7 +23,7 @@ $ pip install -U chaostoolkit-toxiproxy
 
 ### Configuration
 
-To start using the actions and probes all you need to do is add the toxiproxy host with "toxiproxy_host" as the key, and optionally the port with "toxiproxy_port" as the key, to the configuration section in your experiment json. If not provided the port defaults to 8474.
+To start using the actions and probes all you need to do is add the toxiproxy host with "toxiproxy_host" as the key, and optionally the port with "toxiproxy_port" as the key, to the configuration section in your experiment json. If not provided the port defaults to `8474`.
 
 Example in experiment.json
 
@@ -41,7 +41,7 @@ This extension follows the toxiproxy rules. A proxy is the channel where toxicit
 
 All actions and probes in the extension are of python type and are used like any other python extension.
 
-### Proxy actions
+### [Proxy actions](./chaostoxi/proxy/actions.py)
 
 #### create_proxy
 
@@ -55,6 +55,25 @@ Creates a proxy to which toxics can be added. In toxiproxy a listen port of valu
 |listen_host| IP address to bind where toxiproxy listens|No| 0.0.0.0|
 |listen_port|port to listen for requests, 0 means pick random value|No|0|
 |enabled| Whether to start listening or not|No|True|
+
+Example usage:  
+```json
+{
+    "type": "action",
+    "name": "create proxy",
+    "provider": {
+        "type": "python",
+        "module": "chaostoxi.proxy.actions",
+        "func": "create_proxy",
+        "arguments": {
+            "proxy_name": "myproxy",
+            "listen_port" : 6666,
+            "upstream_host" : "10.28.188.118",
+            "upstream_port" : 6040
+        }
+    }
+}
+```
 
 #### modify_proxy
 
@@ -88,31 +107,31 @@ Enables a disabled proxy.
 
 Removes the proxy from the system.
 
-Example usage
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|proxy_name|name for the proxy to delete|Yes|None|
 
+Example usage:  
 ```json
- "method": [
-      {
-            "type": "action",
-            "name": "setup_toxiproxy_proxy",
-            "provider": {
-                "type": "python",
-                "module": "toxiproxy.proxy.actions",
-                "func": "create_proxy",
-                "arguments": {
-                    "proxy_name": "myproxy",
-                    "listen_port" : 6666,
-                    "upstream_host" : "10.28.188.118",
-                    "upstream_port" : 6040
-                }
-            },
-            "pauses": {
-                "after": 1
+"method": [
+    {
+        "type": "action",
+        "name": "delete a proxy",
+        "provider": {
+            "type": "python",
+            "module": "chaostoxi.proxy.actions",
+            "func": "delete_proxy",
+            "arguments": {
+                "proxy_name": "myproxy"
             }
+        },
+        "pauses": {
+            "after": 1
         }
-      ] 
+    }
+] 
 ```
-### Proxy pobes
+### [Proxy probes](./chaostoxi/proxy/probes.py)
 
 #### proxy_exist
 
@@ -123,10 +142,13 @@ Returns True of False if a given proxy exists.
 |proxy_name|name for the proxy|Yes|None|
 
 
-### Toxic actions
+
+
+### [Toxic actions](./chaostoxi/toxic/actions.py)
+
 All actions provided by this extension match the types and attributes of [toxics](https://github.com/Shopify/toxiproxy#toxics). 
 
-#### create\_toxic
+#### create_toxic
 
 Allows you to create any of the supported types of toxics with their attributes. 
 
@@ -139,7 +161,28 @@ Allows you to create any of the supported types of toxics with their attributes.
 |toxicity|Percentage of toxiciy 1.0 is 100%, 0.5 is 50% etc| No| 1.0|
 |attributes|Dictionary of attributes for the type of toxic|No|None|
 
-#### create\_latency\_toxic
+Example usage:  
+```json
+{
+    "type": "action",
+    "name": "create a latency toxic",
+    "provider": {
+        "type": "python",
+        "module": "chaostoxi.toxic.actions",
+        "func": "create_toxic",
+        "arguments": {
+            "for_proxy": "myproxy",
+            "toxic_name" : "myproxy_latency_toxic",
+            "toxic_type" : "latency",
+            "attributes" : {
+                "latency" : 10000
+            }
+        }
+    }
+}
+```
+
+#### create_latency_toxic
 
 Add a delay to all data going through the proxy using a downstream with a toxicity of 100%.
 
@@ -150,59 +193,7 @@ Add a delay to all data going through the proxy using a downstream with a toxici
 |latency| time in milliseconds to add for latency| Yes|None|
 |jitter| time in milliseconds to jitter|No|0
 
-#### create\_bandwith\_degradation\_toxic
-
-Limit the bandwith of a  downstream connection with a toxicity of 100%.
-
-|Argument|Description|Required|Default|
-|--------|-----------|--------|-------|
-|for_proxy|name for the proxy to attach the toxy|Yes|None|
-|toxic_name|name for this toxy|Yes|None|
-|rate| desired bandwith rate in KB/s| Yes|None|
-
-#### create\_slow\_connection\_close\_toxic
-
-Generate as downstream delayed TCP close with a toxicity of 100%.
-
-|Argument|Description|Required|Default|
-|--------|-----------|--------|-------|
-|for_proxy|name for the proxy to attach the toxy|Yes|None|
-|toxic_name|name for this toxy|Yes|None|
-|delay| desired close delay in milliseconds| Yes|None|
-
-#### create\_slicer\_toxic
-
-Slices TCP data up into small bits, optionally adding a delay between each sliced "packet" with a toxicity of 100%.
-
-|Argument|Description|Required|Default|
-|--------|-----------|--------|-------|
-|for_proxy|name for the proxy to attach the toxy|Yes|None|
-|toxic_name|name for this toxy|Yes|None|
-|average_size| size in bytes for the average package| Yes|None|
-|size_variation| variation in bytes of an average pkg (should be smaller than average_size)|Yes|None
-|delay| time in microseconds to delay each packet by|Yes|None
-
-#### create\_limiter\_toxic
-
-Closes connections when transmitted data after the limit, sets it up as a dowsntream, 100% toxicity.
-
-|Argument|Description|Required|Default|
-|--------|-----------|--------|-------|
-|for_proxy|name for the proxy to attach the toxy|Yes|None|
-|toxic_name|name for this toxy|Yes|None|
-|bytes| number of bytes to transmit before connection is closed| Yes|None|
-
-#### delete\_toxic
-
-Deletes the a given toxic.
-
-|Argument|Description|Required|Default|
-|--------|-----------|--------|-------|
-|for_proxy|name for the proxy to attach the toxy|Yes|None|
-|toxic_name|name for this toxy|Yes|None|
-
 Example usage:
-
 ```json
  "method": [        
       {
@@ -211,7 +202,7 @@ Example usage:
             "provider": {
                 "type": "python",
                 "module": "toxiproxy.toxic.actions",
-                "func": "create_dowsntream_latency_toxic",
+                "func": "create_latency_toxic",
                 "arguments": {
                     "for_proxy": "edsproxy",
                     "toxic_name": "latency_toxic",
@@ -225,6 +216,57 @@ Example usage:
         }    
  ]
 ```
+
+#### create_bandwith_degradation_toxic
+
+Limit the bandwith of a  downstream connection with a toxicity of 100%.
+
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|for_proxy|name for the proxy to attach the toxy|Yes|None|
+|toxic_name|name for this toxy|Yes|None|
+|rate| desired bandwith rate in KB/s| Yes|None|
+
+#### create_slow_connection_close_toxic
+
+Generate as downstream delayed TCP close with a toxicity of 100%.
+
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|for_proxy|name for the proxy to attach the toxy|Yes|None|
+|toxic_name|name for this toxy|Yes|None|
+|delay| desired close delay in milliseconds| Yes|None|
+
+#### create_slicer_toxic
+
+Slices TCP data up into small bits, optionally adding a delay between each sliced "packet" with a toxicity of 100%.
+
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|for_proxy|name for the proxy to attach the toxy|Yes|None|
+|toxic_name|name for this toxy|Yes|None|
+|average_size| size in bytes for the average package| Yes|None|
+|size_variation| variation in bytes of an average pkg (should be smaller than average_size)|Yes|None
+|delay| time in microseconds to delay each packet by|Yes|None
+
+#### create_limiter_toxic
+
+Closes connections when transmitted data after the limit, sets it up as a dowsntream, 100% toxicity.
+
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|for_proxy|name for the proxy to attach the toxy|Yes|None|
+|toxic_name|name for this toxy|Yes|None|
+|bytes| number of bytes to transmit before connection is closed| Yes|None|
+
+#### delete_toxic
+
+Deletes a given toxic.
+
+|Argument|Description|Required|Default|
+|--------|-----------|--------|-------|
+|for_proxy|name for the proxy to attach the toxy|Yes|None|
+|toxic_name|name for this toxy|Yes|None|
 
 ## Contribute
 
